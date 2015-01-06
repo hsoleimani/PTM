@@ -39,9 +39,9 @@ for M in k:
     beta = np.exp(np.loadtxt(path+'/final.beta'))
     uswitch = np.loadtxt(path+'/final.u') 
     for j in range(M):
-        beta[uswitch[:,j]==1, j] = beta[uswitch[:,j]==1, 0]
-   
-    
+        ind = np.where(uswitch[:,j]==0)[0]
+        beta[ind,j+1] = beta[ind,0]
+
     # compute sparsity measures
     (avg_tpcs, avg_wrds, unq_wrds) = funcs.topic_word_sparsity(path+'/word-assignments.dat',N,M,uswitch)
     (uv_avg_tpcs, uv_avg_wrds, uv_unq_wrds) = funcs.switch_topic_word_sparsity(uswitch,vswitch,N,M)
@@ -57,7 +57,7 @@ for M in k:
     cmdtxt = cmdtxt + ' --dir ' + path + ' --model ' + path + '/final' 
     os.system(cmdtxt) 
       
-    ## compute likelihood on held-out set
+    ## compute likelihood on training set
     Etrlk = funcs.compute_lkh(trainingfile, beta[:,1:M+1], theta)
 
     ### read test topic proportions
