@@ -7,7 +7,7 @@ LOBJECTS= main.o PTM-model.o cokus.o
 
 LSOURCE= main.c PTM-model.c cokus.c
 
-lda:	$(LOBJECTS)
+ptm:	$(LOBJECTS)
 	$(CC) $(CFLAGS) $(LOBJECTS) -o ptm $(LDFLAGS)
 
 clean:
