@@ -188,7 +188,7 @@ void train(char* start, char* directory, corpus* corpus, char* model_dir)
     if (SAVE_LAG > 0){
 		sprintf(filename,"%s/000",directory);
 		save_ptm_model(model, filename);
-		sprintf(filename,"%s/000.alpha",directory);
+		sprintf(filename,"%s/000",directory);
 		save_ptm_alpha(filename, alpha, corpus->num_docs, model->num_topics);
     }
 
@@ -346,7 +346,7 @@ void train(char* start, char* directory, corpus* corpus, char* model_dir)
 
 void em(corpus* c, ptm_model* model, ptm_alpha* alpha, int switchupdate, ptm_emvars* emvars)
 {
-    int n, j, d, nn, jj, dd, change;
+    int n, j, d, nn, jj, dd, change, j0, n0;
     double t1, t2, t2_sum, t3, t4;
     double sum_gamma2, sum_gamma;
    	double temp_prob, prev_mu, prev_wbar_sum;
@@ -473,8 +473,12 @@ void em(corpus* c, ptm_model* model, ptm_alpha* alpha, int switchupdate, ptm_emv
    	p0t = 0.0;
    	while (counter < 20){
    		change = 0;
-   		for (j = 0; j < model->num_topics; j++){
-   			for (n = 0; n < model->num_terms; n++){
+		random_permute(model->num_topics, emvars->tpcpermute);
+   		for (j0 = 0; j0 < model->num_topics; j0++){
+			j = emvars->tpcpermute[j0];
+			random_permute(model->num_terms, emvars->wrdpermute);
+   			for (n0 = 0; n0 < model->num_terms; n0++){
+				n = emvars->wrdpermute[n0];
 
    				current = model->u[j][n];
    				model->u[j][n] = 1-current; //temp. flip this switch
@@ -610,7 +614,9 @@ void em(corpus* c, ptm_model* model, ptm_alpha* alpha, int switchupdate, ptm_emv
     while (counter < 10){
 	change = 0;
 	for (d = 0; d < c->num_docs; d++){
-		for (j = 0; j < model->num_topics; j++){
+		random_permute(model->num_topics, emvars->tpcpermute);
+		for (j0 = 0; j0 < model->num_topics; j0++){
+			j = emvars->tpcpermute[j0];
 			current = alpha->v[d][j];
 			t2_sum = 0.0;
 			sum_vjd = 0.0;
@@ -1033,4 +1039,22 @@ void write_wrd_asgnmnts(char* filename, corpus* c, ptm_model* model, ptm_alpha* 
 		}
 		fprintf(fileptr, "\n");
 	}
+}
+
+
+
+void random_permute(int size, int* vec){
+
+	int i, j, temp;
+	
+	for (j = 0; j < size; j++){
+		vec[j] = j;
+	}
+	for (i = size-1; i > 0; i--){
+		j = ((int)(size*myrand()))%(i+1);
+		temp = vec[j];
+		vec[j] = vec[i];
+		vec[i] = temp;
+	}
+
 }

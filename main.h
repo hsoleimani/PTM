@@ -32,6 +32,8 @@ double compute_likelihood(ptm_alpha* alpha, ptm_model* model,corpus* corpus,doub
 void inference(char* model_root, char* directory, corpus* corpus);
 corpus* read_data(char* data_filename);
 
+void random_permute(int size, int* vec);
+
 #endif
 
 

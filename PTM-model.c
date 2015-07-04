@@ -116,38 +116,11 @@ void random_initialize_alpha(ptm_model* model, ptm_alpha* alpha, corpus* c)
     int j,n,d,jmax, i, again, cnt, dd;
     document* doc;
     int * sdocs = malloc(sizeof(int)*c->num_docs);
-    cnt = 0;
-  	// initialize other topics
-    for (j = 0; j < model->num_topics; j++){
-    	//randomly choose NUM_INIT documents for each topic
-        for (i = 0; i < NUM_INIT; i++){
-            again = 1;
-            while(again){
-            	again = 0;
-				d = floor(myrand() * c->num_docs);
-				for (dd = 0; dd < cnt; dd++){
-					if (sdocs[dd] == d){
-						again = 1;
-						break;
-					}
-				}
-				if (again == 0){
-					sdocs[cnt] = d;
-					cnt++;
-				}
-            }
-            alpha->alpha[d][j] = 1.0;
-            alpha->v[d][j] = 1;
-        }
-    }
+    int * best_topics = malloc(sizeof(int)*model->num_topics);
+    int num_best = 0;
 
     // starting with only 1 topic on
     for (d = 0; d < c->num_docs; d++){
-		sum = 0.0;
-		for (j = 0; j < model->num_topics; j++){
-			sum += alpha->alpha[d][j];
-		}
-		if (sum == 1) continue;
 
 		lkmax = -1e15;
 		jmax = 0;
@@ -156,6 +129,7 @@ void random_initialize_alpha(ptm_model* model, ptm_alpha* alpha, corpus* c)
 			alpha->v[d][j] = 0;
 		}
 		doc = &(c->docs[d]);
+		num_best = 0;
 		for (j = 0; j < model->num_topics; j++){
 			lk = 0.0;
 			for (n = 0; n < c->docs[d].length; n++){
@@ -167,15 +141,25 @@ void random_initialize_alpha(ptm_model* model, ptm_alpha* alpha, corpus* c)
 					lk += doc->counts[n]*log(temp);
 				}
 			}
+			if (lk == lkmax){
+				best_topics[num_best] = j;
+				num_best += 1;
+			}
 			if (lk > lkmax){
 				jmax = j;
 				lkmax = lk;
+				num_best = 1;
+				best_topics[0] = j;
 			}
+		}
+		if (num_best > 1){
+			jmax = best_topics[(int) floor((myrand())*num_best)];
 		}
 		alpha->alpha[d][jmax] = 1.0;
 		alpha->v[d][jmax] = 1;
 	}
     free(sdocs);
+    free(best_topics);
 }
 
 void random_initialize_alpha_test(ptm_model* model, ptm_alpha* alpha, corpus* c)
@@ -206,6 +190,9 @@ void corpus_initialize_model(ptm_alpha* alpha, ptm_model* model, corpus* c){
     double sum,temp, lk,lkmax;
     int cnt, again;
     document* doc;
+
+    int * best_topics = malloc(sizeof(int)*model->num_topics);
+    int num_best;
 
     double *wbar_sum, *mu;
     int *sdocs;
@@ -291,6 +278,7 @@ void corpus_initialize_model(ptm_alpha* alpha, ptm_model* model, corpus* c){
 		}
 		if (sum == 1) continue;
 		doc = &(c->docs[d]);
+		num_best = 0;
 		for (j = 0; j < model->num_topics; j++){
 			lk = 0;
 			for (n = 0; n < c->docs[d].length; n++){
@@ -302,10 +290,19 @@ void corpus_initialize_model(ptm_alpha* alpha, ptm_model* model, corpus* c){
 					lk += doc->counts[n]*log(temp);
 				}
 			}
+			if (lk == lkmax){
+				best_topics[num_best] = j;
+				num_best += 1;
+			}
 			if (lk > lkmax){
 				jmax = j;
 				lkmax = lk;
+				num_best = 1;
+				best_topics[0] = j;
 			}
+		}
+		if (num_best > 1){
+			jmax = best_topics[(int)floor(myrand()*num_best)];
 		}
 		alpha->alpha[d][jmax] = 1.0;
 		alpha->v[d][jmax] = 1;
@@ -360,6 +357,7 @@ void corpus_initialize_model(ptm_alpha* alpha, ptm_model* model, corpus* c){
     free(wbar_sum);
     free(mu);
     free(sdocs);
+    free(best_topics);
 }
 
 ptm_model* new_ptm_model(int num_terms, int num_topics)
@@ -407,6 +405,8 @@ ptm_emvars* new_ptm_emvars(int nterms, int ntopics, int ndocs){
 	emvars->ldvjd_sum = malloc(sizeof(double)*ntopics);
 	emvars->ldvjd_sum_prev = malloc(sizeof(double)*ntopics);
 	emvars->prob0_w_temp = malloc(sizeof(double)*nterms);
+	emvars->tpcpermute = malloc(sizeof(int)*ntopics);
+	emvars->wrdpermute = malloc(sizeof(int)*nterms);
 	for (j = 0; j < ntopics; j++){
 
 		emvars->t1_sum[j] = 0.0;
@@ -422,9 +422,11 @@ ptm_emvars* new_ptm_emvars(int nterms, int ntopics, int ndocs){
 		emvars->ldvjd_sum[j] = 0.0;
 		emvars->ldvjd_sum_prev[j] = 0.0;
 		emvars->wbar[j] = malloc(sizeof(double)*nterms);
+		emvars->tpcpermute[j] = 0;
 		for (n = 0; n < nterms; n++){
 			emvars->wbar[j][n] = 0.0;
 			emvars->prob0_w_temp[n] = 0.0;
+			emvars->wrdpermute[n] = 0;
 		}
 	}
 	return(emvars);

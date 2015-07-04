@@ -51,6 +51,8 @@ typedef struct
 	double *ldvjd_sum_prev;
 	double **wbar;
 	double *m_d;
+	int *wrdpermute;
+	int *tpcpermute;
 }ptm_emvars;
 
 #endif
